@@ -104,5 +104,11 @@ jobs:
         with:
           name: package
 
-      - name: Publish to npm
-        run: npm publish ./vigilfield-sdk-*.tgz --access public
+      # Staged, never published outright: the version waits in npm's queue
+      # until a maintainer approves it with two-factor authentication, which
+      # this workflow's identity cannot do. `npm stage` needs npm 11.15.0.
+      - name: Stage on npm
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.15.0
+          npm stage publish ./vigilfield-sdk-*.tgz --access public
