@@ -54,6 +54,8 @@ jobs:
       - name: Test the sign-in loader
         run: npm test
 
+      # A scoped name packs as `<scope>-<name>-<version>.tgz`:
+      # `@vigilfield/sdk` is `vigilfield-sdk-<version>.tgz`.
       - name: Pack
         run: npm pack
 
@@ -62,14 +64,14 @@ jobs:
       - name: Check the package installs and imports
         run: |
           set -euo pipefail
-          tarball="$PWD/$(node -p '`${require("./package.json").name}-${require("./package.json").version}.tgz`')"
+          tarball="$PWD/$(node -p '`${require("./package.json").name.replace(/^@/, "").replace("/", "-")}-${require("./package.json").version}.tgz`')"
           mkdir "$RUNNER_TEMP/check"
           cd "$RUNNER_TEMP/check"
           npm init -y > /dev/null
           npm install --ignore-scripts --no-audit --no-fund "$tarball" > /dev/null
           node --input-type=module -e '
-            import { VigilfieldClient, VigilfieldError } from "vigilfield";
-            import { client as signedIn, LoginError } from "vigilfield/login";
+            import { VigilfieldClient, VigilfieldError } from "@vigilfield/sdk";
+            import { client as signedIn, LoginError } from "@vigilfield/sdk/login";
             const client = new VigilfieldClient({ baseUrl: "https://example.invalid/api/v1", token: "t" });
             if (typeof client.tables.list !== "function" || typeof VigilfieldError !== "function") process.exit(1);
             if (typeof signedIn !== "function" || typeof LoginError !== "function") process.exit(1);
@@ -79,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package
-          path: vigilfield-*.tgz
+          path: vigilfield-sdk-*.tgz
           if-no-files-found: error
 
   # Its own job, so the identity npm trusts is never present while the
@@ -103,4 +105,4 @@ jobs:
           name: package
 
       - name: Publish to npm
-        run: npm publish ./vigilfield-*.tgz --access public
+        run: npm publish ./vigilfield-sdk-*.tgz --access public

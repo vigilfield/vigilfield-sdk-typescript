@@ -3,7 +3,7 @@
 The TypeScript client for the Vigilfield API.
 
 ```sh
-npm install vigilfield
+npm install @vigilfield/sdk
 ```
 
 It needs Node.js 20 or later, and is an ES module: use `import`. It has no
@@ -15,7 +15,7 @@ Sign in once with the command line (`vf login --org <slug>`). A script then
 needs no credential of its own:
 
 ```ts
-import { client } from "vigilfield/login";
+import { client } from "@vigilfield/sdk/login";
 
 const vigilfield = client(); // your default organization, or client("acme")
 
@@ -34,7 +34,7 @@ For a job that runs without a person, install an app in your organization and
 use its client:
 
 ```ts
-import { VigilfieldClient } from "vigilfield";
+import { VigilfieldClient } from "@vigilfield/sdk";
 
 const vigilfield = new VigilfieldClient({
   baseUrl: "https://<slug>.vigilfield.com/api/v1",

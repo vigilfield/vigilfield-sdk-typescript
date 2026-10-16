@@ -7,7 +7,7 @@
  * refresh token, readable by its owner only). This module reads them and hands
  * the generated client a function that returns an access token:
  *
- *     import { client } from "vigilfield/login";
+ *     import { client } from "@vigilfield/sdk/login";
  *
  *     const vigilfield = client();      // the default org, or client("acme")
  *
