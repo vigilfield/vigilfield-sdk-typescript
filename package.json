@@ -1,0 +1,42 @@
+{
+  "name": "vigilfield",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Vigilfield API",
+  "homepage": "https://vigilfield.com/docs/platform/typescript-sdk",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vigilfield/vigilfield-sdk-typescript.git"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./login": {
+      "types": "./dist/login.d.ts",
+      "default": "./dist/login.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

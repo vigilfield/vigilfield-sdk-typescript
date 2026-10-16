@@ -1,0 +1,106 @@
+# Build the package and publish it to npm, on a `v*` tag. The tag is pushed by
+# the monorepo's typescript-sdk-publish workflow, which mirrors the source here
+# first; nothing else creates one.
+#
+# npm trusts this workflow by repository, file name and environment (trusted
+# publishing), so no token is stored anywhere. Renaming this file or the `npm`
+# environment breaks the publish until npm's publisher is changed too. The
+# repository is public, so npm records where each version was built.
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      - name: Check the tag is the package's version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          if [ "v${version}" != "$TAG" ]; then
+            echo "tag ${TAG} does not match the package version ${version}" >&2
+            exit 1
+          fi
+
+      # The two build-time packages, at the versions the lock file names. The
+      # client itself depends on nothing.
+      - name: Install the compiler
+        run: npm ci --ignore-scripts
+
+      - name: Compile
+        run: npm run build
+
+      # The sign-in loader, compiled, against a local server and a config
+      # directory written as `vf login` writes one.
+      - name: Test the sign-in loader
+        run: npm test
+
+      - name: Pack
+        run: npm pack
+
+      # The packed file, installed alone: a package that cannot be imported
+      # is never published, and npm never takes a version twice.
+      - name: Check the package installs and imports
+        run: |
+          set -euo pipefail
+          tarball="$PWD/$(node -p '`${require("./package.json").name}-${require("./package.json").version}.tgz`')"
+          mkdir "$RUNNER_TEMP/check"
+          cd "$RUNNER_TEMP/check"
+          npm init -y > /dev/null
+          npm install --ignore-scripts --no-audit --no-fund "$tarball" > /dev/null
+          node --input-type=module -e '
+            import { VigilfieldClient, VigilfieldError } from "vigilfield";
+            import { client as signedIn, LoginError } from "vigilfield/login";
+            const client = new VigilfieldClient({ baseUrl: "https://example.invalid/api/v1", token: "t" });
+            if (typeof client.tables.list !== "function" || typeof VigilfieldError !== "function") process.exit(1);
+            if (typeof signedIn !== "function" || typeof LoginError !== "function") process.exit(1);
+          '
+
+      - name: Keep the packed file for the publish
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package
+          path: vigilfield-*.tgz
+          if-no-files-found: error
+
+  # Its own job, so the identity npm trusts is never present while the
+  # package's build runs.
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      id-token: write
+    steps:
+      # Trusted publishing needs npm 11.5.1 or later, which Node 24 carries.
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      - name: Fetch the packed file
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: package
+
+      - name: Publish to npm
+        run: npm publish ./vigilfield-*.tgz --access public
